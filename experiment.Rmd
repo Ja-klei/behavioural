@@ -1,0 +1,38 @@
+---
+title: "BE_exper"
+author: "Group 9"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r packages}
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(estimatr)
+```
+
+```{r data}
+test_dat <- read_excel("~/Documents/Uni/Behaviroural Economics/Experiment/test_dat.xlsx", 
+    sheet = "simple")
+```
+
+```{r wrangling}
+test_dat <- test_dat %>%
+  mutate(d_m = m_cd - m_ab)
+```
+
+```{r work}
+d_m_mean <- test_dat %>%
+  group_by(treatment) %>%
+  summarise(d_m_mean = mean(d_m, na.rm = TRUE))
+  pull(d_m_mean)
+  
+```
+```{r test}
+model <- lm_robust(d_m ~ 1, data = test_dat, se_type = "HC3") 
+  summary(model)
+
+```
+
+
