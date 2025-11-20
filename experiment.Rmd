@@ -32,7 +32,6 @@ d_m_mean <- test_dat %>%
 ```{r test}
 model <- lm_robust(d_m ~ 1, data = test_dat, se_type = "HC3") 
   summary(model)
-
 ```
 
 
