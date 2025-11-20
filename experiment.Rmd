@@ -28,6 +28,8 @@ d_m_mean <- test_dat %>%
   summarise(d_m_mean = mean(d_m, na.rm = TRUE))
   pull(d_m_mean)
   
+
+  
 ```
 ```{r test}
 model <- lm_robust(d_m ~ 1, data = test_dat, se_type = "HC3") 
