@@ -27,10 +27,16 @@ d_m_mean <- test_dat %>%
   group_by(treatment) %>%
   summarise(d_m_mean = mean(d_m, na.rm = TRUE))
   pull(d_m_mean)
-  
-
-  
 ```
+```{r plots}
+test_dat %>%
+  ggplot(aes(x = d_m))+
+  geom_histogram(binwidth = 1, boundary = 0) +
+  geom_vline(xintercept = 0, color = "red", linewidth = 2)
+  theme_minimal()
+
+```
+
 ```{r test}
 model <- lm_robust(d_m ~ 1, data = test_dat, se_type = "HC3") 
   summary(model)
