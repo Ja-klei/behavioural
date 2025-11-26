@@ -28,9 +28,31 @@ small_dat <- dat %>%
   filter(treatment == 0)
 
 plot_dat <- dat %>%
-  mutate(choice = paste0(AB, CD)) %>%
-  group_by(treatment, choice) %>%
-  
+  mutate(choice = paste0(AB, CD)) %>% #generate var "choice" where content of AB and CD is pasted without space
+  group_by(treatment, choice) %>% #group by treatment and choice
+  summarise(n = n(), .groups = "drop") %>% #count all the occurrences of every choice in every treatment
+  group_by(treatment) %>% #group by treatment again 
+  mutate(prop = n/sum(n)) %>% #compute proportional levels of n for each treatment and choice setting 
+  ungroup() %>% #ungroup for cleanliness 
+  mutate(choice = factor(choice, levels = c("ac","ad","bc","bd"))) #factor so the ranking on the graph is correct 
+
+treat_names <- c(
+  "0" = "Small Treatment",
+  "1" = "Large Treatment"
+)
+
+ggplot(plot_dat, aes(x = choice, y = prop, fill = choice)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent_format()) +
+  facet_wrap(~ treatment, nrow = 1, labeller = labeller(treatment = treat_names)) +
+  labs(
+    x = "Choice (AC, AD, BC, BD)",
+    y = "Proportion within treatment",
+    title = "Choice distribution by treatment"
+  ) +
+  theme_bw() +
+  scale_fill_brewer(palette = "Greens")
+
 ```
 
 ```{r large}
@@ -46,15 +68,6 @@ model <- lm_robust(d_m ~ 1, data = large_dat, se_type = "HC3")
 #sign test
 
 
-#visualizations 
-large_dat %>%
-ggplot(aes(x = d_m)) +
-  geom_histogram(aes(y = ..density..), bins = 30, fill = "forestgreen") +
-  geom_density()
-
-large_dat %>%
-  ggplot(aes(x = AB, fill = CD))+
-  geom_bar(position = "fill")
 ```
 
 ```{r small}
