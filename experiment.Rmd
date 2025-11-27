@@ -5,21 +5,22 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r packages}
+```{r packages, echo = FALSE}
 library(tidyverse)
 library(readxl)
 library(janitor)
 library(estimatr)
 ```
 
-```{r data}
+```{r data, echo = FALSE}
 dat <- read_excel("~/Documents/Uni/Behaviroural Economics/Experiment/dat.xlsx", 
     sheet = "total")
 ```
 
-```{r wrangling}
+```{r wrangling, echo = FALSE}
 dat <- dat %>%
-  mutate(d_m = m_cd - m_ab)
+  mutate(d_m = m_cd - m_ab) %>%
+  mutate(choice = paste0(AB,CD))
 
 large_dat <- dat %>%
   filter(treatment == 1)
@@ -27,8 +28,26 @@ large_dat <- dat %>%
 small_dat <- dat %>%
   filter(treatment == 0)
 
-plot_dat <- dat %>%
-  mutate(choice = paste0(AB, CD)) %>% #generate var "choice" where content of AB and CD is pasted without space
+
+
+  
+```
+
+```{r summary stats, echo = FALSE}
+med_d_m = dat %>%
+  group_by(treatment) %>%
+  summarise(med = median(d_m, na.rm = TRUE), .groups = "drop")
+
+dat %>% #relative frequencies of first round choices and treatment
+  group_by(treatment, choice) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n/sum(n)) %>%
+  ungroup()
+
+```
+
+```{r plots, echo = FALSE}
+plot_dat <- dat %>% #plot data for round 1 can be found in plot_dat
   group_by(treatment, choice) %>% #group by treatment and choice
   summarise(n = n(), .groups = "drop") %>% #count all the occurrences of every choice in every treatment
   group_by(treatment) %>% #group by treatment again 
@@ -36,12 +55,12 @@ plot_dat <- dat %>%
   ungroup() %>% #ungroup for cleanliness 
   mutate(choice = factor(choice, levels = c("ac","ad","bc","bd"))) #factor so the ranking on the graph is correct 
 
-treat_names <- c(
+treat_names <- c( 
   "0" = "Small Treatment",
-  "1" = "Large Treatment"
+  "1" = "Large Treatment"# defining facet names
 )
 
-ggplot(plot_dat, aes(x = choice, y = prop, fill = choice)) +
+abcd_plot <- ggplot(plot_dat, aes(x = choice, y = prop, fill = choice)) +
   geom_col() +
   scale_y_continuous(labels = scales::percent_format()) +
   facet_wrap(~ treatment, nrow = 1, labeller = labeller(treatment = treat_names)) +
@@ -50,30 +69,109 @@ ggplot(plot_dat, aes(x = choice, y = prop, fill = choice)) +
     y = "Proportion within treatment",
     title = "Choice distribution by treatment"
   ) +
-  theme_bw() +
+  theme_classic() +
   scale_fill_brewer(palette = "Greens")
+show(abcd_plot)
+
+
+cre_dat <- dat %>%
+  ungroup() %>%
+  mutate(
+  choice3 = case_when(
+      choice %in% c("ac", "bd") ~ "EU",
+      choice == "ad" ~ "CRP",
+      choice == "bc" ~ "RCRP")) %>%
+  count(treatment, choice3) %>%
+  group_by(treatment) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
+
+cre_plot <- cre_dat %>%
+  ggplot(aes(x = choice3, y = prop, fill = choice3)) +
+  geom_col()+
+  facet_wrap(~treatment) +
+  scale_fill_brewer(palette = "Greens") +
+  theme_classic() +
+  labs(
+    x = "CRP, RCRP, or Expected Utility",
+    y = "proprtion",
+    title = "Occurences of Common Ratio Preference choices"
+  )
+
+
+show(cre_plot)
+
+d_m_plot <- dat %>%
+  ggplot(aes(x = d_m))+
+  geom_bar()+
+  facet_wrap(~treatment, nrow = 1) +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_vline(
+    data = med_d_m,
+    aes(xintercept = med),
+    linewidth = 0.8,
+    color = "red") +
+   geom_text(
+    data = med_d_m,
+    aes(x = med, y = 0, label = "median"),
+    vjust = -30,
+    hjust = -0.2,
+    colour = "red",
+    angle = 0) +
+  theme_classic() +
+  labs(
+    x = "∆m for treatment 1 and 2",
+    y = "count",
+    title = "Delta m of treatment one and two with median."
+  )
+
+show(d_m_plot)
 
 ```
 
-```{r large}
-#part 1
-large_dat %>%
-  count(AB, CD)
 
-
-#part 2
+```{r large, echo = FALSE}
 #mean test, using a regression on a constant only to get robust SE
 model <- lm_robust(d_m ~ 1, data = large_dat, se_type = "HC3") 
   summary(model)
 #sign test
 
+#plots
+large_dat %>%
+ggplot(aes(x = d_m)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "grey50") +
+  geom_density() +
+  labs(
+    x = "∆m for large treatment",
+    y = "density",
+    title = "Density distribution of delta m for large treatment"
+  )
+
+large_dat %>%
+  ggplot(aes(x = m_ab, y = m_cd)) +
+  geom_point()+
+  scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
+  geom_abline(intercept = 0, slope = 1)
+
+l_long <- large_dat %>%
+  pivot_longer(
+    cols = c(m_ab, m_cd),
+    names_to = "choice2",
+    values_to = "value"
+  )
+
+l_long %>%
+  ggplot(aes(x = value, fill = choice2)) +
+  geom_bar(position = "dodge")
+
+large_dat %>%
+  ggplot(aes(x = d_m)) +
+  geom_bar()
 
 ```
 
-```{r small}
-small_dat %>%
-  count(AB, CD)
-
+```{r small, echo = FALSE}
 model <- lm_robust(d_m ~ 1, data = small_dat, se_type = "HC3") 
   summary(model)
   
@@ -81,6 +179,28 @@ small_dat %>%
 ggplot(aes(x = d_m)) +
   geom_histogram(aes(y = ..density..), bins = 30, fill = "grey50") +
   geom_density()
+
+small_dat %>%
+  ggplot(aes(x = m_ab, y = m_cd)) +
+  geom_point()+
+  scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
+  geom_abline(intercept = 0, slope = 1) +
+  theme_classic()
+
+s_long <- small_dat %>%
+  pivot_longer(
+    cols = c(m_ab, m_cd),
+    names_to = "choice2",
+    values_to = "value")
+
+s_long %>%
+  ggplot(aes(x = value, fill = choice2)) +
+  geom_bar(position = "dodge")
+
+small_dat %>%
+  ggplot(aes(x = d_m)) +
+  geom_bar()
 ```
 
 
