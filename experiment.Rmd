@@ -127,6 +127,16 @@ d_m_plot <- dat %>%
 
 show(d_m_plot)
 
+sign_dat <- dat %>%
+  filter(treatment == 1) %>%
+  mutate(sign = case_when(
+    d_m > 0 ~ "positive",
+    d_m < 0 ~ "negative",
+    TRUE ~ "zero"
+  )) %>%
+  count(sign) %>%
+  mutate(s_prop = n/sum(n))
+
 ```
 
 
