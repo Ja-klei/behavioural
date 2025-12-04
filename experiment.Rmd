@@ -26,6 +26,11 @@ dat <- dat %>%
   mutate(d_m = m_cd - m_ab) %>%
   mutate(choice = paste0(AB,CD))
 
+treat_names <- c( 
+  "0" = "Small Treatment",
+  "1" = "Large Treatment"# defining facet names
+)
+
 dat <- dat %>%
   mutate(
     y_AB = if_else(AB == "a", 1, 0),# 1 is the sure option, 0 is the risky option 
@@ -53,8 +58,6 @@ large_dat <- dat %>%
 
 small_dat <- dat %>%
   filter(treatment == 0)
-
-
 ```
 
 ```{r model}
@@ -68,14 +71,13 @@ treat_mean_test <- dat %>%
   group_by(treatment) %>%
   summarise(p_value = t.test(d_m, mu = 0)$p.value)
 
-tidy(treat_mean_test)
+show(treat_mean_test)
 
 #treatment effect
 model_dm <- lm_robust(d_m ~ treatment, data = dat, se_type = "HC3")
 summary(model_dm)
 
-tidy(model_dm)
-
+show(model_dm)
 #sign data for sign test
 
 sign_dat %>%
@@ -108,6 +110,8 @@ dat <- dat %>%
       labels = c("Small stakes", "Large stakes")
     )
   )
+
+
 
 m_small_AB <- glm(y_AB ~ dist_AB, data = small_dat, family = binomial)
 m_small_CD <- glm(y_CD ~ dist_CD, data = small_dat, family = binomial)
@@ -189,7 +193,7 @@ pred_all <- bind_rows(
     )
   )
 
-ggplot(pred_all, aes(x = dist, y = p, colour = task_f)) +
+logit_model <- ggplot(pred_all, aes(x = dist, y = p, colour = task_f)) +
   geom_line(size = 1) +
   facet_wrap(~ treatment_f, nrow = 1) +
   theme_classic() +
@@ -199,8 +203,23 @@ ggplot(pred_all, aes(x = dist, y = p, colour = task_f)) +
     colour = "Task"
   )
 
+show(logit_model)
 
+logit_model <- logit_model +
+  theme(
+    axis.text  = element_text(size = 18),
+    axis.title = element_text(size = 20),
+    plot.title = element_text(size = 22, face = "bold")
+  )
 
+ggsave(
+  "logit_model.png",
+  plot = logit_model,
+  units = "in",
+  width  = 13.33,
+  height = 7.5,
+  dpi = 300
+)
 ```
 
 ```{r summary stats, echo = FALSE}
@@ -214,9 +233,15 @@ dat %>% #relative frequencies of first round choices and treatment
   mutate(freq = n/sum(n)) %>%
   ungroup()
 
+dat %>%
+  group_by(treatment) %>%
+  summarise(med = median(d_m, na.rm = TRUE))
+
 ```
 
 ```{r plots, echo = FALSE}
+
+
 plot_dat <- dat %>% #plot data for round 1 can be found in plot_dat
   group_by(treatment, choice) %>% #group by treatment and choice
   summarise(n = n(), .groups = "drop") %>% #count all the occurrences of every choice in every treatment
@@ -226,8 +251,8 @@ plot_dat <- dat %>% #plot data for round 1 can be found in plot_dat
   mutate(choice = factor(choice, levels = c("ac","ad","bc","bd"))) #factor so the ranking on the graph is correct 
 
 treat_names <- c( 
-  "0" = "Small Treatment",
-  "1" = "Large Treatment"# defining facet names
+  "0" = "Small Stakes",
+  "1" = "Large Stakes"# defining facet names
 )
 
 abcd_plot <- ggplot(plot_dat, aes(x = choice, y = prop, fill = choice)) +
@@ -240,9 +265,8 @@ abcd_plot <- ggplot(plot_dat, aes(x = choice, y = prop, fill = choice)) +
     title = "Choice distribution by treatment"
   ) +
   theme_classic() +
-  scale_fill_brewer(palette = "Greens")
+  scale_fill_brewer(palette = "Blues")
 show(abcd_plot)
-
 
 cre_dat <- dat %>%
   ungroup() %>%
@@ -260,7 +284,7 @@ cre_plot <- cre_dat %>%
   ggplot(aes(x = choice3, y = prop, fill = choice3)) +
   geom_col()+
   facet_wrap(~treatment,labeller = labeller(treatment = treat_names)) +
-  scale_fill_brewer(palette = "Greens") +
+  scale_fill_brewer(palette = "Blues") +
   theme_classic() +
   labs(
     x = "CRP, RCRP, or Expected Utility",
@@ -268,8 +292,23 @@ cre_plot <- cre_dat %>%
     title = "Occurences of Common Ratio Preference choices"
   )
 
-
 show(cre_plot)
+
+cre_plot <- cre_plot +
+  theme(
+    axis.text  = element_text(size = 18),
+    axis.title = element_text(size = 20),
+    plot.title = element_text(size = 22, face = "bold")
+  )
+
+ggsave(
+  "cre_plot.png",
+  plot = cre_plot,
+  units = "in",
+  width  = 13.33,
+  height = 7.5,
+  dpi = 300
+)
 
 d_m_plot <- dat %>%
   ggplot(aes(x = d_m))+
@@ -289,6 +328,7 @@ d_m_plot <- dat %>%
     colour = "red",
     angle = 0) +
   theme_classic() +
+  scale_fill_brewer(palette = "Blues") +
   labs(
     x = "∆m for treatment 1 and 2",
     y = "count",
@@ -296,16 +336,27 @@ d_m_plot <- dat %>%
   )
 
 show(d_m_plot)
+d_m_plot<-d_m_plot +
+  theme(
+    axis.text  = element_text(size = 18),
+    axis.title = element_text(size = 20),
+    plot.title = element_text(size = 22, face = "bold")
+  )
 
-
+ggsave(
+  "d_m_plot.png",
+  plot = d_m_plot,
+  units = "in",
+  width  = 13.33,
+  height = 7.5,
+  dpi = 300
+)
 
 dat %>%
 ggplot(aes(x = d_m)) +
   geom_histogram(aes(y = ..density..), bins = 30, fill = "grey50") +
   geom_density() +
   facet_wrap(~treatment)
-
-
 
 ```
 
