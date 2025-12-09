@@ -11,8 +11,8 @@ library(tidyverse)
 library(readxl)
 library(janitor)
 library(estimatr)
-library(broom)       # for tidy() on models
-library(knitr)       # for kable()
+library(broom)      
+library(knitr)       
 library(kableExtra)
 library(modelsummary)
 library(stringr)
@@ -400,9 +400,11 @@ ggplot(dat, aes(x = scaled_dist_indiff, y = cre_rcre)) +
   labs(title = "CRE-RCRE by Distance to Indifference")+
   theme("minimal")
 
-modelss <- lm(cre_rcre ~ scaled_value_diff + scaled_dist_indiff + factor(treatment),
-            data = dat)
-summary(modelss)
+#important!!!
+
+  modelss <- lm(cre_rcre ~ scaled_value_diff + scaled_dist_indiff + factor(treatment),
+              data = dat)
+  summary(modelss)
 
 model_interact1 <- lm(
   cre_rcre ~ scaled_value_diff * factor(treatment) + scaled_dist_indiff,
